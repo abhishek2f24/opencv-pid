@@ -116,3 +116,89 @@ def create_rectangle_with_popup(pdf_path, x1, y1, x3, y3, text):
 # Example usage
 create_rectangle_with_popup('input.pdf', 100, 100, 300, 200, 'This is a popup text')
 
+
+
+
+
+from PyPDF2 import PdfFileWriter, PdfFileReader
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+
+def create_button_with_popup(pdf_path, x, y, width, height, text):
+    output = PdfFileWriter()
+
+    # Load the existing PDF
+    with open(pdf_path, 'rb') as file:
+        input_pdf = PdfFileReader(file)
+        page = input_pdf.getPage(0)  # Assuming you want to add the button to the first page
+
+        # Create a canvas to draw the button and the rectangle
+        c = canvas.Canvas('temp.pdf', pagesize=letter)
+
+        # Create the button
+        button_name = 'button1'
+        c.acroForm.button(
+            name=button_name,
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            buttonStyle='rectangle',
+            fillColor=(0, 0, 0),
+            textColor=(1, 1, 1),
+            borderWidth=0,
+            borderColor=None,
+            borderColorSelected=None,
+            fillColorSelected=(0, 0, 0),
+            textColorSelected=(1, 1, 1),
+            annotationFlags='print',
+            relative=False,
+            borderWidthOn=0,
+            borderStyle='solid',
+            text=text,
+            fontSize=12,
+            forceBorder=True,
+        )
+
+        # Create the rectangle
+        rect_name = 'rectangle1'
+        c.acroForm.rect(
+            name=rect_name,
+            x=x + 2,
+            y=y - 2,
+            width=width - 4,
+            height=height - 4,
+            borderWidth=1,
+            borderColor=(0, 0, 0),
+            fillColor=None,
+            strokeColor=(0, 0, 0),
+            fillColorSelected=None,
+            textColorSelected=(0, 0, 0),
+            lineWidth=1,
+            lineStyle='solid',
+        )
+
+        c.save()
+
+        # Add JavaScript action to the button for the hover effect
+        button_action = '''
+        var rect = this.getField('rectangle1');
+        rect.display = display.hidden;
+        '''
+        page['/AA'] = {
+            '/E': 'this.setAction("MouseEnter", "' + button_action + '");'
+        }
+
+        # Merge the canvas with the existing PDF page
+        overlay_pdf = PdfFileReader('temp.pdf')
+        page.mergePage(overlay_pdf.getPage(0))
+        output.addPage(page)
+
+        # Save the modified PDF with the button and the rectangle
+        with open('output.pdf', 'wb') as output_pdf:
+            output.write(output_pdf)
+
+    print("PDF with button and popup created successfully!")
+
+# Example usage
+create_button_with_popup('input.pdf', 100, 100, 100, 50, 'Click Me')
