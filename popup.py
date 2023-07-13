@@ -202,3 +202,48 @@ def create_button_with_popup(pdf_path, x, y, width, height, text):
 
 # Example usage
 create_button_with_popup('input.pdf', 100, 100, 100, 50, 'Click Me')
+
+
+
+from PyPDF2 import PdfFileWriter, PdfFileReader
+from PyPDF2.generic import NameObject, DictionaryObject, ArrayObject, FloatObject
+
+def create_annotation_with_rectangle(pdf_path, output_path, x1, y1, x3, y3, comment):
+    output = PdfFileWriter()
+
+    with open(pdf_path, 'rb') as file:
+        pdf = PdfFileReader(file)
+
+        for page_num in range(pdf.getNumPages()):
+            page = pdf.getPage(page_num)
+
+            # Create the annotation dictionary
+            annotation = DictionaryObject()
+            annotation.update({
+                NameObject('/Type'): NameObject('/Annot'),
+                NameObject('/Subtype'): NameObject('/Text'),
+                NameObject('/Rect'): ArrayObject([FloatObject(x1), FloatObject(y1), FloatObject(x3), FloatObject(y3)]),
+                NameObject('/Contents'): comment,
+            })
+
+            # Add the annotation to the page's /Annots array
+            if '/Annots' in page:
+                page['/Annots'].append(annotation)
+            else:
+                page[NameObject('/Annots')] = ArrayObject([annotation])
+
+            output.addPage(page)
+
+        # Save the modified PDF with the annotation
+        with open(output_path, 'wb') as output_pdf:
+            output.write(output_pdf)
+
+    print("PDF with annotation created successfully!")
+
+# Example usage
+pdf_path = 'input.pdf'
+output_path = 'output.pdf'
+x1, y1, x3, y3 = 100, 100, 300, 200
+comment = "This is a comment"
+create_annotation_with_rectangle(pdf_path, output_path, x1, y1, x3, y3, comment)
+
