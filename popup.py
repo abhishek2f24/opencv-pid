@@ -73,3 +73,46 @@ popup_text = 'This is a popup annotation.'
 
 add_popup_annotation(input_pdf_path, output_pdf_path, x1, y1, x3, y3, popup_text)
 
+
+
+
+from PyPDF2 import PdfFileWriter, PdfFileReader
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+
+def create_rectangle_with_popup(pdf_path, x1, y1, x3, y3, text):
+    output = PdfFileWriter()
+
+    # Load the existing PDF
+    with open(pdf_path, 'rb') as file:
+        input_pdf = PdfFileReader(file)
+        page = input_pdf.getPage(0)  # Assuming you want to add the rectangle to the first page
+
+        # Create a canvas to draw the rectangle and the text window
+        c = canvas.Canvas('temp.pdf', pagesize=letter)
+        c.setLineWidth(1)
+        c.setStrokeColorRGB(0, 0, 0)
+        c.rect(x1, y1, x3 - x1, y3 - y1)
+
+        # Create a text window
+        text_width = x3 - x1 - 10  # Adjust the width as per your requirement
+        text_height = y3 - y1 - 10  # Adjust the height as per your requirement
+        c.setFont("Helvetica", 12)
+        c.drawString(x1 + 5, y1 + 5, text, textWidth=text_width, leading=text_height)
+
+        c.save()
+
+        # Merge the canvas with the existing PDF page
+        overlay_pdf = PdfFileReader('temp.pdf')
+        page.mergePage(overlay_pdf.getPage(0))
+        output.addPage(page)
+
+        # Save the modified PDF with the rectangle and the text window
+        with open('output.pdf', 'wb') as output_pdf:
+            output.write(output_pdf)
+
+    print("PDF with rectangle and popup created successfully!")
+
+# Example usage
+create_rectangle_with_popup('input.pdf', 100, 100, 300, 200, 'This is a popup text')
+
