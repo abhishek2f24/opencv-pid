@@ -6,3 +6,40 @@ mins-"htt;://ww.v.org/1999/xhtm]" xmlns:xfa-"http://ww.xfa.org/schema/xfa-data/1
 cfa:APIVersion="Acrobat:23.3.0" xfa:spec="2.0.2" >p dir="ltr"><span dir="ltr" style-"font-size:10.5pt;text-
 lig:left;font-ueight;normal;font-style:normal">mclskd</span></p></body>', '/Rect': [719.532, 1946.43, 743.532,
 1978.48], "/Sub]': "Sticky lote', '/Subtype': '/Text', '/T': '1994183', '/Type': '/Annot')
+
+
+import fitz
+
+def add_sticky_notes(pdf_path, sticky_notes):
+    doc = fitz.open(pdf_path)
+
+    for sticky_note in sticky_notes:
+        page_number = sticky_note['/P'].number  # Get the page number
+        page = doc[page_number]
+
+        # Extract the rectangle coordinates
+        rect = sticky_note['/Rect']
+        x1, y1, x2, y2 = rect
+
+        # Add the sticky note annotation
+        annot = page.add_annot(fitz.Annot(fitz.PdfDict(rect), sticky_note['/Contents']))
+        annot.set_colors(stroke=(0, 0, 0), fill=(1, 1, 0))  # Customize the colors as desired
+
+    doc.save('output.pdf')
+    doc.close()
+
+# Example usage
+pdf_path = 'input.pdf'
+sticky_notes = [
+    {
+        '/P': fitz.IndirectPDFNumber(0),
+        '/Rect': [100, 100, 200, 150],
+        '/Contents': 'Sticky Note 1'
+    },
+    {
+        '/P': fitz.IndirectPDFNumber(1),
+        '/Rect': [300, 300, 400, 350],
+        '/Contents': 'Sticky Note 2'
+    }
+]
+add_sticky_notes(pdf_path, sticky_notes)
