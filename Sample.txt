@@ -1,0 +1,8 @@
+('/AP": (IN: Indirectobject(18, 0, 1855612026544), '/R': Indirectobject(19, e, 1855612026544)), '/C': [1, 1, 1]
+"/CA': e.0@s00ess, "/Contents': '"mclskd', '/CreationDate': "D:20230713131225+05'30'", '/F': 28, '/M'.
+"0: 202307131313e9s@5"30"", '/NM': '41da9313-fdf6-4a48-80aa-5e34C3f8fd9c', '/Name': '/Comment', '/P': IndirectObject(17
+e, 1855612826544), "/Popup': Indirectobject(491, 0, 1855612026544), '/RC': '<?xml version-"1.0"?><body
+mins-"htt;://ww.v.org/1999/xhtm]" xmlns:xfa-"http://ww.xfa.org/schema/xfa-data/1.0/"
+cfa:APIVersion="Acrobat:23.3.0" xfa:spec="2.0.2" >p dir="ltr"><span dir="ltr" style-"font-size:10.5pt;text-
+lig:left;font-ueight;normal;font-style:normal">mclskd</span></p></body>', '/Rect': [719.532, 1946.43, 743.532,
+1978.48], "/Sub]': "Sticky lote', '/Subtype': '/Text', '/T': '1994183', '/Type': '/Annot')
