@@ -1,0 +1,94 @@
+import json
+import os
+import json
+from sqlalchemy             import create_engine, event
+from azure.identity         import ManagedIdentityCredential,DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
+import logging
+import struct
+import pandas as pd
+
+# Set environment variables
+os.environ['AZURE_CLIENT_ID']= '323f5a04-e983-45be-82d1-f7000752d232'
+os.environ['AZURE_CLIENT_SECRET']= 'TrD8Q~jWFC9Q0zF~auVp2LulUm9RWIiOxUt4tddM'
+os.environ['AZURE_TENANT_ID']= '329e91b0-e21f-48fb-a071-456717ecc28e'
+
+"""
+*******************************************************************************
+Function to get value of key from environment variable
+*******************************************************************************
+"""
+def get_key_value(id):
+    return "https://azr-kv-tsprep-demo.vault.azure.net/"
+
+
+"""
+*******************************************************************************
+ Purpose: Retrieves the database secret from  Azure Key Vault
+*******************************************************************************
+"""
+def get_secret(secret):
+    credential = DefaultAzureCredential()
+    secret_client = SecretClient(
+        vault_url=get_key_value('tsprep_key_vault_url'), 
+        credential=credential
+    )
+    return secret_client.get_secret(secret).value
+
+
+"""
+*******************************************************************************
+ Purpose: Get data cleansing database connection string from key vault
+*******************************************************************************
+"""
+def getCleansingDbConnString():
+    print('Entered into get_dbinfoinitialise method')
+    clconnectionstring = get_secret("PiSQLOdbcConnStr")
+    return clconnectionstring
+
+"""
+*******************************************************************************
+ Purpose: Get database connection using Active directory token
+*******************************************************************************
+"""
+def getConnection(db_connection_str):   
+    print("Inside getConnection method") 
+    
+    SQL_COPT_SS_ACCESS_TOKEN = 1256  # Connection option for access tokens, as defined in msodbcsql.h
+    TOKEN_URL = "https://database.windows.net/.default"  # The token URL for any Azure SQL database
+    
+    engine = create_engine(db_connection_str)
+    azure_credentials = DefaultAzureCredential()
+
+    @event.listens_for(engine, "do_connect")
+    def provide_token(dialect, conn_rec, cargs, cparams):
+        # remove the "Trusted_Connection" parameter that SQLAlchemy adds
+        cargs[0] = cargs[0].replace(";Trusted_Connection=Yes", "")
+        # create token credential
+        raw_token = azure_credentials.get_token(TOKEN_URL).token.encode("utf-16-le")
+        token_struct = struct.pack(f"<I{len(raw_token)}s", len(raw_token), raw_token)
+        # apply it to keyword arguments
+        cparams["attrs_before"] = {SQL_COPT_SS_ACCESS_TOKEN: token_struct}
+
+    logging.info("Connected to database ")
+
+    return engine
+
+def fetchdb(get_engine,querytags):
+    query = "SELECT * FROM dbo.Pi_Live_Data_Clean where Timestamp > ? and Timestamp < ? and TagId in (querytags)"
+    query = query.replace("taglist", ", ".join(["?"]*len(querytags)))
+    print("query",query)
+    return pd.read_sql_query(query, get_engine)
+
+def query(taglist, from_time, to_time):
+    param = [str(from_time), str(to_time)]
+    param.extend(taglist)
+    print(taglist)
+    db_connection_str = getCleansingDbConnString()
+    db_engine = getConnection(db_connection_str)
+    query_result = fetchdb(db_engine, taglist)   
+    output_list = []
+    for jdict in query_result.to_dict(orient='records'):
+        output_list.append(jdict)
+    json_output = json.dumps(output_list,indent=4, sort_keys=True, default=str)
+    return json_output
