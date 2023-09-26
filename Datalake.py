@@ -1,57 +1,46 @@
 from pyspark.sql import SparkSession
-import pandas as pd
-from io import BytesIO
+from pyspark.sql.functions import col
 from datetime import datetime
 
 # Initialize a Spark session
 spark = SparkSession.builder.appName("AzureBlobProcessor").getOrCreate()
 
 # Set your Azure Blob Storage configurations
-azure_blob_connection_string = "your_connection_string_here"
 container_name = "your_container_name_here"
 tag_list = ["tag1", "tag2"]  # Replace with your list of tags
+date_to_retrieve = "20230924"
 
-# Initialize the Azure Blob Storage client
-container_tag_folder = "RAW/ARCHIVE/{}/IN"
-
-for tag in tag_list:
+# Define a UDF to read and process data from Azure Blob Storage
+def process_blob_data(tag):
     print("Start of", tag)
     print(datetime.now())
+
+    container_tag_folder = f"RAW/ARCHIVE/{tag}/IN"
     
-    # List blobs in the container with a specific tag folder
-    blobs = spark._jvm.azure.storage.blob.BlobServiceClientBuilder() \
-        .connectionString(azure_blob_connection_string) \
-        .containerClient(container_name) \
-        .getContainerClient(container_tag_folder.format(tag)) \
-        .listBlobs().iterator()
+    # Read data from Azure Blob Storage into a Spark DataFrame
+    df = spark.read.option("header", "true").option("sep", ";").csv(f"abfss://{container_name}@your_account.dfs.core.windows.net/{container_tag_folder}/*.csv")
+    
+    # Filter data for the specific date
+    filtered_df = df.filter(col("date_column") == date_to_retrieve)
+
+    # Process the data as needed
+    # For example, you can perform transformations or aggregations here
 
     print("End of", tag)
     print(datetime.now())
 
-    date_to_retrieve = "20230924"
+    return filtered_df
 
-    for blob in blobs:
-        blob_name = blob.getName()
-        if date_to_retrieve in blob_name:
-            print("Start file load", datetime.now())
+# Create a list of DataFrames, one for each tag
+tag_dataframes = [process_blob_data(tag) for tag in tag_list]
 
-            # Initialize the blob client
-            blob_client = spark._jvm.azure.storage.blob.BlobServiceClientBuilder() \
-                .connectionString(azure_blob_connection_string) \
-                .containerClient(container_name) \
-                .getBlobClient(blob_name)
+# Union the DataFrames into a single DataFrame
+result_df = tag_dataframes[0]
+for df in tag_dataframes[1:]:
+    result_df = result_df.union(df)
 
-            # Download blob data
-            blob_data = blob_client.downloadBlob().readAll()
-            blob_data_bytes = bytearray(blob_data)
-
-            # Process the data using Pandas (you can use Spark DataFrame for large-scale data)
-            data = pd.read_csv(BytesIO(blob_data_bytes), on_bad_lines='skip', sep=";", low_memory=True, encoding="utf-8", na_values=[""])
-
-            # Here, you can further process the data or save it as needed
-            # For large-scale data, consider using Spark DataFrame operations
-
-            print("End file load", datetime.now())
+# Show or save the result DataFrame as needed
+result_df.show()
 
 # Stop the Spark session when done
 spark.stop()
